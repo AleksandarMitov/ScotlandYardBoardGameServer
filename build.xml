@@ -1,0 +1,204 @@
+<project name="scotlandyard" basedir=".">
+
+  <property name="bin.dir" value="bin"/>
+  <property name="classes.dir" value="${bin.dir}/classes"/>
+  <property name="jar.dir" value="${bin.dir}/jar"/>
+  <property name="test_classes.dir" value="${bin.dir}/tests"/>
+
+  <property name="lib.dir" value="lib"/>
+  <property name="resources.dir" value="resources"/>
+  <property name="src.dir" value="src"/>
+  <property name="gui_main" value="GuiService"/>
+
+  <property name="test_resources.dir" value="test_resources"/>
+  <property name="test.dir" value="tests"/>
+
+  <target name="clean">
+    <delete dir="${bin.dir}"/>
+  </target>
+
+  <target name="make_folders" depends="clean">
+    <mkdir dir="${bin.dir}"/>
+    <mkdir dir="${classes.dir}"/>
+    <mkdir dir="${jar.dir}"/>
+    <mkdir dir="${test_classes.dir}"/>
+  </target>
+
+  <target name="compile" depends="make_folders">
+    <javac debug="true" includeantruntime="false" destdir="${classes.dir}">
+      <compilerarg value="-Xlint:unchecked"/>
+      <src path="${src.dir}"/>
+    </javac>
+  </target>
+
+  <target name="jar" depends="compile">
+    <jar destfile="${jar.dir}/${ant.project.name}.jar" basedir="${classes.dir}">
+      <fileset dir="${resources.dir}"/>
+    </jar>
+  </target>
+
+  <target name="gui" depends="jar">
+    <java fork="true" classname="${gui_main}">
+      <classpath>
+        <pathelement location="${classes.dir}" />
+        <path location="${jar.dir}/${ant.project.name}.jar" />
+      </classpath>
+    </java>
+  </target>
+
+  <path id="tests_classpath">
+    <fileset dir="${lib.dir}" includes="**/*.jar"/>
+    <fileset dir="${jar.dir}" includes="${ant.project.name}.jar"/>
+  </path>
+
+  <path id="classpath.test">
+    <fileset dir="." includes="**/*junit.jar" />
+  </path>
+
+  <taskdef name="junit" classname="org.apache.tools.ant.taskdefs.optional.junit.JUnitTask">
+    <classpath refid="classpath.test"/>
+  </taskdef>
+
+  <target name="compile-tests" depends="jar">
+    <mkdir dir="${test_classes.dir}"/>
+    <javac debug="true" srcdir="${test.dir}" includeantruntime="false" destdir="${test_classes.dir}" classpathref="tests_classpath"/>
+  </target>
+
+  <target name="init-tests" depends="compile-tests">
+    <copy todir="${test_classes.dir}/test_resources">
+      <fileset dir="${test_resources.dir}"/>
+    </copy>
+  </target>
+
+  <target name="test" depends="init-tests">
+    <junit printsummary="yes" haltonfailure="no">
+      <classpath>
+        <pathelement location="${test_classes.dir}"/>
+        <path refid="tests_classpath"/>
+        <path location="${jar.dir}/${ant.project.name}.jar"/>
+      </classpath>
+      <formatter type="brief" usefile="false"/>
+      <batchtest fork="no" todir="${test.dir}">
+        <fileset dir="${test.dir}">
+          <include name="**/*Tests.java"/>
+        </fileset>
+      </batchtest>
+    </junit>
+  </target>
+
+  <target name="test-part-1" depends="init-tests">
+    <junit printsummary="yes" haltonfailure="no">
+      <classpath>
+        <pathelement location="${test_classes.dir}"/>
+        <path refid="tests_classpath"/>
+        <path location="${jar.dir}/${ant.project.name}.jar"/>
+      </classpath>
+      <formatter type="brief" usefile="false"/>
+      <batchtest fork="no" todir="${test.dir}">
+        <fileset dir="${test.dir}">
+          <include name="InitialisationTests.java"/>
+          <include name="MrXLocationsTests.java"/>
+        </fileset>
+      </batchtest>
+    </junit>
+  </target>
+
+  <target name="test-part-2-1" depends="test-part-1">
+    <junit printsummary="yes" haltonfailure="no">
+      <classpath>
+        <pathelement location="${test_classes.dir}"/>
+        <path refid="tests_classpath"/>
+        <path location="${jar.dir}/${ant.project.name}.jar"/>
+      </classpath>
+      <formatter type="brief" usefile="false"/>
+      <batchtest fork="no" todir="${test.dir}">
+        <fileset dir="${test.dir}">
+          <include name="PlayerNotifyTests.java"/>
+        </fileset>
+      </batchtest>
+    </junit>
+  </target>
+
+  <target name="test-part-2-2" depends="test-part-2-1">
+    <junit printsummary="yes" haltonfailure="no">
+      <classpath>
+        <pathelement location="${test_classes.dir}"/>
+        <path refid="tests_classpath"/>
+        <path location="${jar.dir}/${ant.project.name}.jar"/>
+      </classpath>
+      <formatter type="brief" usefile="false"/>
+      <batchtest fork="no" todir="${test.dir}">
+        <fileset dir="${test.dir}">
+          <include name="MrXValidMovesTests.java"/>
+          <include name="DetectiveValidMovesTests.java"/>
+        </fileset>
+      </batchtest>
+    </junit>
+  </target>
+
+  <target name="test-part-2-3" depends="test-part-2-2">
+    <junit printsummary="yes" haltonfailure="no">
+      <classpath>
+        <pathelement location="${test_classes.dir}"/>
+        <path refid="tests_classpath"/>
+        <path location="${jar.dir}/${ant.project.name}.jar"/>
+      </classpath>
+      <formatter type="brief" usefile="false"/>
+      <batchtest fork="no" todir="${test.dir}">
+        <fileset dir="${test.dir}">
+          <include name="PlayTests.java"/>
+        </fileset>
+      </batchtest>
+    </junit>
+  </target>
+
+  <target name="test-part-3-1" depends="test-part-2-3">
+    <junit printsummary="yes" haltonfailure="no">
+      <classpath>
+        <pathelement location="${test_classes.dir}"/>
+        <path refid="tests_classpath"/>
+        <path location="${jar.dir}/${ant.project.name}.jar"/>
+      </classpath>
+      <formatter type="brief" usefile="false"/>
+      <batchtest fork="no" todir="${test.dir}">
+        <fileset dir="${test.dir}">
+          <include name="SpectatorTests.java"/>
+        </fileset>
+      </batchtest>
+    </junit>
+  </target>
+
+  <target name="test-part-3-2" depends="test-part-3-1">
+    <junit printsummary="yes" haltonfailure="no">
+      <classpath>
+        <pathelement location="${test_classes.dir}"/>
+        <path refid="tests_classpath"/>
+        <path location="${jar.dir}/${ant.project.name}.jar"/>
+      </classpath>
+      <formatter type="brief" usefile="false"/>
+      <batchtest fork="no" todir="${test.dir}">
+        <fileset dir="${test.dir}">
+          <include name="RoundsTests.java"/>
+        </fileset>
+      </batchtest>
+    </junit>
+  </target>
+
+  <target name="test-part-4" depends="test-part-3-2">
+    <junit printsummary="yes" haltonfailure="no">
+      <classpath>
+        <pathelement location="${test_classes.dir}"/>
+        <path refid="tests_classpath"/>
+        <path location="${jar.dir}/${ant.project.name}.jar"/>
+      </classpath>
+      <formatter type="brief" usefile="false"/>
+      <batchtest fork="no" todir="${test.dir}">
+        <fileset dir="${test.dir}">
+          <include name="IsGameOverTests.java"/>
+          <include name="GetWinningPlayersTests.java"/>
+        </fileset>
+      </batchtest>
+    </junit>
+  </target>
+
+</project>
