@@ -10,9 +10,17 @@ import java.util.*;
 public class ScotlandYard implements ScotlandYardView, Receiver {
 
     protected MapQueue<Integer, Token> queue;
-    protected Integer gameId;
+    protected int gameId;
     protected Random random;
-
+    private int numberOfDetectives;
+    private List<Boolean> rounds;
+    private ScotlandYardGraph graph;
+    private List<PlayerData> players = new ArrayList<PlayerData>(); //holding the players as a list in proper order
+    private Map<Colour, PlayerData> playersMap = new HashMap<Colour, PlayerData>(); //holding the players as a key-value pair
+    private int numberOfPlayersCurrentlyJoined = 0;
+    private int lastKnownLocationOfMrX = 0;
+    private int currentRound = 0;
+  
     /**
      * Constructs a new ScotlandYard object. This is used to perform all of the game logic.
      *
@@ -26,7 +34,9 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
         this.queue = queue;
         this.gameId = gameId;
         this.random = new Random();
-        //TODO:
+        this.numberOfDetectives = numberOfDetectives;
+        this.rounds = rounds;
+        this.graph = graph;
     }
 
     /**
@@ -159,8 +169,14 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      * @return true if the player has joined successfully.
      */
     public boolean join(Player player, Colour colour, int location, Map<Ticket, Integer> tickets) {
-        //TODO:
-        return false;
+        if(numberOfPlayersCurrentlyJoined > numberOfDetectives + 1) return false;
+    	PlayerData newPlayer = new PlayerData(player, colour, location, tickets);
+        //adding the Black player(Mr.X) as the first player
+    	if(colour == Colour.Black) players.add(0, newPlayer);
+        else players.add(newPlayer);
+    	playersMap.put(colour, newPlayer); //also adding the player in the players map
+    	++numberOfPlayersCurrentlyJoined;
+        return true;
     }
 
     /**
@@ -171,8 +187,9 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      * @return The list of players.
      */
     public List<Colour> getPlayers() {
-        //TODO:
-        return new ArrayList<Colour>();
+        List<Colour> playerColours = new ArrayList<Colour>();
+        for(PlayerData player : players) playerColours.add(player.getColour());
+        return playerColours;
     }
 
     /**
@@ -196,8 +213,12 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      * MrX is revealed in round n when {@code rounds.get(n)} is true.
      */
     public int getPlayerLocation(Colour colour) {
-        //TODO:
-        return 0;
+    	if(colour == Colour.Black)
+        {
+        	if(rounds.get(currentRound)) lastKnownLocationOfMrX = playersMap.get(colour).getLocation();
+        	else return lastKnownLocationOfMrX;
+        }
+        return playersMap.get(colour).getLocation();
     }
 
     /**
@@ -208,8 +229,7 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      * @return The number of tickets of the given player.
      */
     public int getPlayerTickets(Colour colour, Ticket ticket) {
-        //TODO:
-        return -1;
+    	return playersMap.get(colour).getTickets().get(ticket);
     }
 
     /**
@@ -229,8 +249,9 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      * @return true when the game is ready to be played, false otherwise.
      */
     public boolean isReady() {
-        //TODO:
-        return false;
+        if(numberOfPlayersCurrentlyJoined != numberOfDetectives + 1) return false;
+        if(players.get(0).getColour() != Colour.Black) return false; //first player is not Mr.X
+        return true;
     }
 
     /**
@@ -264,8 +285,7 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      * @return a list of booleans that indicate the turns where MrX reveals himself.
      */
     public List<Boolean> getRounds() {
-        //TODO:
-        return new ArrayList<Boolean>();
+    	return rounds;
     }
 
 }
