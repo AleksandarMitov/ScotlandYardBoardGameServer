@@ -20,7 +20,7 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
     private int numberOfPlayersCurrentlyJoined = 0;
     private int lastKnownLocationOfMrX = 0;
     private int currentRound = 0;
-  
+    private int currentPlayerIndex = 0; //the index in the players list of the player whose turn is on
     /**
      * Constructs a new ScotlandYard object. This is used to perform all of the game logic.
      *
@@ -89,14 +89,15 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      * @param token the secret token for the move.
      */
     private void notifyPlayer(Colour colour, Integer token) {
-        //TODO:
+        PlayerData currentPlayer = playersMap.get(colour);
+        currentPlayer.getPlayer().notify(currentPlayer.getLocation(), validMoves(colour), token, this);
     }
 
     /**
      * Passes priority onto the next player whose turn it is to play.
      */
     protected void nextPlayer() {
-        //TODO:
+        currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
     }
 
     /**
@@ -260,8 +261,7 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      * @return The colour of the current player.
      */
     public Colour getCurrentPlayer() {
-        //TODO:
-        return Colour.Black;
+        return players.get(currentPlayerIndex).getColour();
     }
 
     /**
