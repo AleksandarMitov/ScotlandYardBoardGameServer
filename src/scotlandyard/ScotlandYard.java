@@ -145,8 +145,23 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      * @return the list of valid moves for a given player.
      */
     public List<Move> validMoves(Colour player) {
-        //TODO:
-        return new ArrayList<Move>();
+    	TODO
+    	Map<Ticket, Integer> tickets = playersMap.get(player).getTickets();
+        PlayerData currentPlayer = playersMap.get(player);
+    	List<MoveTicket> validMoves = graph.generateMoves(player, getPlayerLocation(player), tickets);
+        //now generate all the double moves
+    	Integer doubleTicketCount = tickets.get(Ticket.Double);
+    	if(doubleTicketCount != null && doubleTicketCount > 0)
+    	{
+    		for(MoveTicket move : validMoves)
+    		{
+    			tickets.put(move.ticket, tickets.get(move.ticket) - 1);
+    			List<MoveTicket> newMoves = graph.generateMoves(player, move.target, tickets);
+    			tickets.put(move.ticket, tickets.get(move.ticket) + 1);
+    			MoveDouble
+    		}
+    	}
+    	return validMoves;
     }
 
     /**
