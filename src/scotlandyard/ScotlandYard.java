@@ -55,6 +55,13 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
         Integer token = getSecretToken();
         queue.put(gameId, new Token(token, getCurrentPlayer(), System.currentTimeMillis()));
         notifyPlayer(getCurrentPlayer(), token);
+        if(getCurrentPlayer() == Colour.Black)
+        {
+        	//MrX has made a move so we move to next round
+        	++currentRound;
+        	//if mrX has to reveal himself on this round we update his last known location
+        	if(rounds.get(currentRound)) lastKnownLocationOfMrX = playersMap.get(Colour.Black).getLocation();
+        }
     }
 
     /**
@@ -117,7 +124,12 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      * @param move the MoveTicket to play.
      */
     protected void play(MoveTicket move) {
-        //TODO:
+        
+    	PlayerData whichPlayer = playersMap.get(move.colour);
+        Map<Ticket, Integer> ticketPool = whichPlayer.getTickets();
+        whichPlayer.setLocation(move.target);
+        ticketPool.put(move.ticket, ticketPool.get(move.ticket) - 1);
+        
     }
 
     /**
@@ -126,7 +138,16 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      * @param move the MoveDouble to play.
      */
     protected void play(MoveDouble move) {
-        //TODO:
+    	
+    	PlayerData whichPlayer = playersMap.get(move.colour);
+    	Map<Ticket, Integer> ticketPool = whichPlayer.getTickets();
+        Ticket ticket1 = move.move1.ticket;
+        Ticket ticket2 = move.move2.ticket;
+        Integer endLocation = move.move2.target;
+        whichPlayer.setLocation(endLocation);
+        ticketPool.put(ticket1, ticketPool.get(ticket1) - 1);
+        ticketPool.put(ticket2, ticketPool.get(ticket2) - 1);
+        
     }
 
     /**
@@ -145,23 +166,42 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      * @return the list of valid moves for a given player.
      */
     public List<Move> validMoves(Colour player) {
-    	TODO
-    	Map<Ticket, Integer> tickets = playersMap.get(player).getTickets();
-        PlayerData currentPlayer = playersMap.get(player);
-    	List<MoveTicket> validMoves = graph.generateMoves(player, getPlayerLocation(player), tickets);
-        //now generate all the double moves
+    	PlayerData currentPlayer = playersMap.get(player);
+    	Map<Ticket, Integer> tickets = currentPlayer.getTickets();
+        //set locations occupied by detectives as forbidden
+        Set<Integer> forbiddenLocations = new HashSet<Integer>();
+        for(PlayerData playerD : players)
+        {
+        	if(playerD.getColour() != Colour.Black) forbiddenLocations.add(playerD.getLocation());
+        }
+        //forbidden locations are set
+    	List<MoveTicket> generatedMoves = graph.generateMoves(player, currentPlayer.getLocation(), tickets, forbiddenLocations);
+    	//now generate all the double moves for MrX
+    	List<MoveDouble> doubleMoves = new ArrayList<MoveDouble>();
     	Integer doubleTicketCount = tickets.get(Ticket.Double);
-    	if(doubleTicketCount != null && doubleTicketCount > 0)
+    	if(player == Colour.Black && doubleTicketCount != null && doubleTicketCount > 0)
     	{
-    		for(MoveTicket move : validMoves)
+    		for(MoveTicket move : generatedMoves)
     		{
+    			//backtracking all the double moves
     			tickets.put(move.ticket, tickets.get(move.ticket) - 1);
-    			List<MoveTicket> newMoves = graph.generateMoves(player, move.target, tickets);
+    			List<MoveTicket> newMoves = graph.generateMoves(player, move.target, tickets, forbiddenLocations);
     			tickets.put(move.ticket, tickets.get(move.ticket) + 1);
-    			MoveDouble
+    			//now combining the tickets
+    			for(MoveTicket move2 : newMoves)
+    			{
+    				MoveDouble doubleTicket = MoveDouble.instance(player, move, move2);
+    				//add the double ticket only if we don't have such a combo already
+    				if(!doubleMoves.contains(doubleTicket)) doubleMoves.add(doubleTicket);
+    			}
     		}
     	}
-    	return validMoves;
+    	List<Move> result = new ArrayList<Move>();
+    	result.addAll(generatedMoves);
+    	result.addAll(doubleMoves);
+    	if(result.isEmpty() && player != Colour.Black) result.add(MovePass.instance(player));
+    	//return new ArrayList<Move>();
+    	return result;
     }
 
     /**
@@ -188,10 +228,20 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
         if(numberOfPlayersCurrentlyJoined > numberOfDetectives + 1) return false;
     	PlayerData newPlayer = new PlayerData(player, colour, location, tickets);
         //adding the Black player(Mr.X) as the first player
-    	if(colour == Colour.Black) players.add(0, newPlayer);
+    	if(colour == Colour.Black)
+    	{
+    		players.add(0, newPlayer);
+    		//adding black tickets for the previously joined players
+    		//newPlayer.getTickets().put(Ticket.Secret, numberOfPlayersCurrentlyJoined);
+    	}
         else players.add(newPlayer);
     	playersMap.put(colour, newPlayer); //also adding the player in the players map
     	++numberOfPlayersCurrentlyJoined;
+    	if(colour != Colour.Black && playersMap.get(Colour.Black) != null)
+    	{
+    		//PlayerData mrX = playersMap.get(Colour.Black);
+    		//mrX.getTickets().put(Ticket.Secret, mrX.getTickets().get(Ticket.Secret) + 1);
+    	}
         return true;
     }
 
@@ -230,11 +280,11 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      */
     public int getPlayerLocation(Colour colour) {
     	if(colour == Colour.Black)
-        {
-        	if(rounds.get(currentRound)) lastKnownLocationOfMrX = playersMap.get(colour).getLocation();
-        	else return lastKnownLocationOfMrX;
-        }
-        return playersMap.get(colour).getLocation();
+    	{
+    		if(rounds.get(currentRound)) lastKnownLocationOfMrX = playersMap.get(Colour.Black).getLocation();
+    		else return lastKnownLocationOfMrX;
+    	}
+    	return playersMap.get(colour).getLocation();
     }
 
     /**
@@ -287,8 +337,7 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      * @return the number of moves MrX has played.
      */
     public int getRound() {
-        //TODO:
-        return -1;
+        return currentRound;
     }
 
     /**
