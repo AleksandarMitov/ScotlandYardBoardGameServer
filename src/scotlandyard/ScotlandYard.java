@@ -21,6 +21,7 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
     private int lastKnownLocationOfMrX = 0;
     private int currentRound = 0;
     private int currentPlayerIndex = 0; //the index in the players list of the player whose turn is on
+    private List<Spectator> spectators = new ArrayList<Spectator>();
     /**
      * Constructs a new ScotlandYard object. This is used to perform all of the game logic.
      *
@@ -109,6 +110,7 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
         if (move instanceof MoveTicket) play((MoveTicket) move);
         else if (move instanceof MoveDouble) play((MoveDouble) move);
         else if (move instanceof MovePass) play((MovePass) move);
+        updateSpectators(move); //notifying all the spectators about the changed state of the game
     }
 
     /**
@@ -226,9 +228,10 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      * @param spectator the spectator that wants to be notified when a move is made.
      */
     public void spectate(Spectator spectator) {
-        //TODO:
+        spectators.add(spectator);
+    	//TODO:
     }
-
+    
     /**
      * Allows players to join the game with a given starting state. When the
      * last player has joined, the game must ensure that the first player to play is Mr X.
@@ -366,5 +369,27 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
     public List<Boolean> getRounds() {
     	return rounds;
     }
-
+    
+    private void updateSpectators(Move move) {
+    	//handle Mr.X in a custom way to retain his secret location
+    	if(move != null && move.colour == Colour.Black) move = generateNewMoveWithDifferentTarget(move, lastKnownLocationOfMrX);
+    	for(Spectator spectator : spectators) spectator.notify(move);
+    }
+    
+    private Move generateNewMoveWithDifferentTarget(Move move, Integer newTarget) {
+    	Move toReturn = move;
+    	if(move instanceof MoveTicket)
+    	{
+    		toReturn = MoveTicket.instance(move.colour, ((MoveTicket) move).ticket, newTarget);
+    	}
+    	else if(move instanceof MoveDouble)
+    	{
+    		MoveTicket moveTicket1 = ((MoveDouble) move).move1;
+    		MoveTicket moveTicket2 = ((MoveDouble) move).move2;
+    		moveTicket1 = MoveTicket.instance(moveTicket1.colour, moveTicket1.ticket, newTarget);
+    		moveTicket2 = MoveTicket.instance(moveTicket2.colour, moveTicket2.ticket, newTarget);
+    		toReturn = MoveDouble.instance(move.colour, moveTicket1, moveTicket2);
+    	}
+    	return toReturn;
+    }
 }
