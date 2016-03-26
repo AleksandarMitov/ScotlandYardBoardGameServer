@@ -55,13 +55,6 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
         Integer token = getSecretToken();
         queue.put(gameId, new Token(token, getCurrentPlayer(), System.currentTimeMillis()));
         notifyPlayer(getCurrentPlayer(), token);
-        if(getCurrentPlayer() == Colour.Black)
-        {
-        	//MrX has made a move so we move to next round
-        	++currentRound;
-        	//if mrX has to reveal himself on this round we update his last known location
-        	if(rounds.get(currentRound)) lastKnownLocationOfMrX = playersMap.get(Colour.Black).getLocation();
-        }
     }
 
     /**
@@ -129,7 +122,19 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
         Map<Ticket, Integer> ticketPool = whichPlayer.getTickets();
         whichPlayer.setLocation(move.target);
         ticketPool.put(move.ticket, ticketPool.get(move.ticket) - 1);
-        
+        //if a detective does a move, we gotta pass the ticket onto Mr.X
+        if(move.colour != Colour.Black)
+        {
+        	PlayerData mrX = playersMap.get(Colour.Black);
+        	Map<Ticket, Integer> mrXTicketPool = mrX.getTickets();
+        	mrXTicketPool.put(move.ticket, mrXTicketPool.get(move.ticket) + 1);
+        }
+        else
+        {
+        	//Mr.X makes a move, increment round and reveal him if necessary
+        	++currentRound;
+        	if(rounds.get(currentRound)) lastKnownLocationOfMrX = playersMap.get(Colour.Black).getLocation();
+        }
     }
 
     /**
@@ -143,11 +148,18 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
     	Map<Ticket, Integer> ticketPool = whichPlayer.getTickets();
         Ticket ticket1 = move.move1.ticket;
         Ticket ticket2 = move.move2.ticket;
+        Integer midLocation = move.move1.target;
         Integer endLocation = move.move2.target;
+        whichPlayer.setLocation(midLocation);
         whichPlayer.setLocation(endLocation);
         ticketPool.put(ticket1, ticketPool.get(ticket1) - 1);
         ticketPool.put(ticket2, ticketPool.get(ticket2) - 1);
-        
+        ticketPool.put(Ticket.Double, ticketPool.get(Ticket.Double) - 1);
+        //only Mr.X has double tickets so we can increment rounds and reveal him if necessary
+        ++currentRound;
+        if(rounds.get(currentRound)) lastKnownLocationOfMrX = playersMap.get(Colour.Black).getLocation();
+        ++currentRound;
+        if(rounds.get(currentRound)) lastKnownLocationOfMrX = playersMap.get(Colour.Black).getLocation();
     }
 
     /**
@@ -156,7 +168,10 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      * @param move the MovePass to play.
      */
     protected void play(MovePass move) {
-        //TODO:
+        /*
+         In a MovePass move, we basically stand still in the same position
+         so we don't really have to do anything here
+         */
     }
 
     /**
