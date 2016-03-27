@@ -13,14 +13,42 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
     protected int gameId;
     protected Random random;
     private final int numberOfDetectives;
+    /**
+     * a list holding a value true if mr.X has to reveal himself
+     * in that round, contains false otherwise.
+     */
     private final List<Boolean> rounds;
+    /**
+     * Contains the graph representing the game map
+     */
     private final ScotlandYardGraph graph;
+    /**
+     * Hold a list of players in their order of playing the game.
+     * Mr.X should always be the first one making a move.
+     */
     private final List<PlayerData> players = new ArrayList<PlayerData>(); //holding the players as a list in proper order
+    /**
+     * A Map mapping a player with a given {@link scotlandyard.Colour} to his {@link scotlandyard.PlayerData}
+     */
     private final Map<Colour, PlayerData> playersMap = new HashMap<Colour, PlayerData>(); //holding the players as a key-value pair
+    /**
+     * Used by the {@link scotlandyard.ScotlandYard#isReady()} method to make sure all players have
+     * joined the game before its start
+     */
     private int numberOfPlayersCurrentlyJoined = 0;
+    /**
+     * Contains the last revealed location of Mr.X
+     */
     private int lastKnownLocationOfMrX = 0;
     private int currentRound = 0;
-    private int currentPlayerIndex = 0; //the index in the players list of the player whose turn is on
+    /**
+     * The index in the players list of the player whose turn is on
+     */
+    private int currentPlayerIndex = 0;
+    /**
+     * A list holding all the spectators in the game.
+     * Part of the implementation of the Observer design pattern.
+     */
     private final List<Spectator> spectators = new ArrayList<Spectator>();
     private final Colour mrXColour = Colour.Black;
     /**
@@ -99,6 +127,8 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      * Passes priority onto the next player whose turn it is to play.
      */
     protected void nextPlayer() {
+    	//we increment the index of the next player in the players list, also going
+    	//back at the beginning if we've reached the end
         currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
     }
 
@@ -120,18 +150,20 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      */
     protected void play(MoveTicket move) {
     	PlayerData whichPlayer = getPlayerDataByColour(move.colour);
-        whichPlayer.setLocation(move.target);
-        whichPlayer.removeTicket(move.ticket);
+        whichPlayer.setLocation(move.target); //setting the player to the new location
+        whichPlayer.removeTicket(move.ticket); //removing the ticket from his ticket pool
         //if a detective does a move, we gotta pass the ticket onto Mr.X
         if(isPlayerADetective(move.colour))
         {
         	PlayerData mrX = getMrXData();
+        	//giving the ticket to Mr.X
         	mrX.addTicket(move.ticket);
         }
         else
         {
         	//Mr.X makes a move, increment round and reveal him if necessary
         	incrementRound();
+        	//reveal Mr.X if we're supposed to in this round
         	if(rounds.get(currentRound)) revealMrX();
         }
         updateSpectators(move); //notifying all the spectators about the changed state of the game
@@ -144,8 +176,10 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      */
     protected void play(MoveDouble move) {
     	PlayerData whichPlayer = getPlayerDataByColour(move.colour);
+    	//removing the double ticket from the player's ticket pool
     	whichPlayer.removeTicket(Ticket.Double);
     	updateSpectators(move); //notifying all the spectators about the changed state of the game
+    	//playing the MoveTickets individually
     	play((Move) move.move1);
     	play((Move) move.move2);
     }
@@ -171,36 +205,44 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      */
     public List<Move> validMoves(Colour player) {
     	PlayerData currentPlayer = getPlayerDataByColour(player);
-        //set locations occupied by detectives as forbidden
+        //set locations occupied by the detectives as forbidden
         Set<Integer> forbiddenLocations = new HashSet<Integer>();
         for(PlayerData playerD : players)
         {
+        	//if the player is a detective, add his current location as forbidden 
         	if(isPlayerADetective(playerD)) forbiddenLocations.add(playerD.getLocation());
         }
         //forbidden locations are set
     	List<MoveTicket> generatedMoves = graph.generateMoves(currentPlayer, currentPlayer.getLocation(), forbiddenLocations);
-    	//now generate all the double moves for MrX
+    	//now generate all the double moves for Mr.X
     	List<MoveDouble> doubleMoves = new ArrayList<MoveDouble>();
+    	//if the player is Mr.X and he has DoubleTickets left
     	if(isPlayerMrX(currentPlayer) && playerHasATicketOfType(currentPlayer, Ticket.Double))
     	{
+    		//generate every combination of pairs of moves
     		for(MoveTicket move : generatedMoves)
     		{
     			//backtracking all the double moves
+    			//removing the ticket for the first move
     			currentPlayer.removeTicket(move.ticket);
+    			//generating the possibilities for the second move
     			List<MoveTicket> newMoves = graph.generateMoves(currentPlayer, move.target, forbiddenLocations);
+    			//adding the ticket for the first move back
     			currentPlayer.addTicket(move.ticket);
-    			//now combining the tickets
+    			//now generating the pairs
     			for(MoveTicket move2 : newMoves)
     			{
     				MoveDouble doubleTicket = MoveDouble.instance(player, move, move2);
-    				//add the double ticket only if we don't have such a combo already
+    				//add the double ticket as a result only if we don't have such a combo already
     				if(!doubleMoves.contains(doubleTicket)) doubleMoves.add(doubleTicket);
     			}
     		}
     	}
     	List<Move> result = new ArrayList<Move>();
+    	//merging the single and double moves
     	result.addAll(generatedMoves);
     	result.addAll(doubleMoves);
+    	//if we have no legal moves and are dealing with a grumpy detective, we gotta return a MovePass move
     	if(result.isEmpty() && isPlayerADetective(player)) result.add(MovePass.instance(player));
     	return result;
     }
@@ -212,6 +254,7 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      * @return the list of valid moves for a given player.
      */
     public List<Move> validMoves(PlayerData player) {
+    	//making use of polymorphism and stuff
     	return validMoves(player.getColour());
     }
 
@@ -222,7 +265,8 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      * @param spectator the spectator that wants to be notified when a move is made.
      */
     public void spectate(Spectator spectator) {
-        spectators.add(spectator);
+        //adding the spectator to the spectators list as part of the implementation fo the Observer design pattern
+    	spectators.add(spectator);
     }
     
     /**
@@ -246,9 +290,10 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      * @return true if the player has joined successfully.
      */
     public boolean join(Player player, Colour colour, int location, Map<Ticket, Integer> tickets) {
-        if(numberOfPlayersCurrentlyJoined > numberOfDetectives + 1) return false;
+    	//check if too many players are trying to join the game
+        if(numberOfPlayersCurrentlyJoined > numberOfDetectives) return false;
     	PlayerData newPlayer = new PlayerData(player, colour, location, tickets);
-        //adding the Black player(Mr.X) as the first player
+        //adding the Black player(Mr.X) as the first player at the beginning of the players list
     	if(isPlayerMrX(colour)) players.add(0, newPlayer);
         else players.add(newPlayer);
     	playersMap.put(colour, newPlayer); //also adding the player in the players map
@@ -290,7 +335,7 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
     			break;
     		}
     	}
-    	//if he's found or he cannot make a move
+    	//if Mr.X's found or he cannot make a move
     	if(mrXHasBeenFound || validMoves(mrX).isEmpty())
     	{
     		//detectives win
@@ -301,7 +346,7 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
     	}
     	else
     	{
-    		//if the game is over and Mr.X hasn't been found or he can move, then he must be the one winning
+    		//if the game is over and Mr.X hasn't been found or he can still move, then he must be the one winning
     		result.add(mrX.getColour());
     	}
     	return result;
@@ -317,6 +362,7 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      * MrX is revealed in round n when {@code rounds.get(n)} is true.
      */
     public int getPlayerLocation(Colour colour) {
+    	//because Mr.X is special
     	if(isPlayerMrX(colour))
     	{
     		if(rounds.get(currentRound)) revealMrX();
@@ -344,7 +390,9 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      * @return true when the game is over, false otherwise.
      */
     public boolean isGameOver() {
+    	//if the game isn't even ready it cannot be over
     	if(!isReady()) return false;
+    	//if it's ready but there are no detectives, then it's over
     	if(isReady() && players.size() < 2) return true;
     	//check if MrX has been found
     	PlayerData mrX = getMrXData();
@@ -362,17 +410,18 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
     	{
     		if(isPlayerMrX(player)) continue; //skip Mr.X
     		List<Move> possibleMoves = validMoves(player); //generate the possible moves for current detective
-    		//if first move is not MovePass, then he can move
+    		//if first move is not MovePass, then he can definitely make a move
     		if(!(possibleMoves.get(0) instanceof MovePass))
     		{
     			aDetectiveCanMove = true;
     			break;
     		}
     	}
+    	//if no detective can move, Mr.X turns out to be one lucky guy
         if(!aDetectiveCanMove) return true;
         //now check if mr.X can move, if he cannot he has lost
         List<Move> mrXMoves = validMoves(getMrXColour());
-        //if his moves list is empty, he cannot make a move
+        //if his moves list is empty, he cannot make a move and he better get ready to have a good time with the inmates
         if(mrXMoves.isEmpty()) return true;
         return false;
     }
@@ -383,8 +432,9 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      * @return true when the game is ready to be played, false otherwise.
      */
     public boolean isReady() {
+    	//the the number of joined player is less than the supposed amount, the show's not ready to start yet
         if(numberOfPlayersCurrentlyJoined != numberOfDetectives + 1) return false;
-        if(!isPlayerMrX(players.get(0))) return false; //first player is not Mr.X
+        if(!isPlayerMrX(players.get(0))) return false; //first player is not Mr.X, we can't afford to lose our star
         return true;
     }
 
@@ -420,12 +470,25 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
     	return rounds;
     }
     
+    /**
+     * Updates all the spectators of the game with the move made
+     * Handles Mr.X differently than the detectives, cause he's special like that
+     * 
+     * @param move the move that's made
+     */
     private void updateSpectators(Move move) {
     	//handle Mr.X in a custom way to retain his secret location
     	if(move != null && isPlayerMrX(move.colour)) move = generateNewMoveWithDifferentTarget(move, getLastRevealedLocationOfMrX());
     	for(Spectator spectator : spectators) spectator.notify(move);
     }
     
+    /**
+     * Generates a similar Move, just with a different end target
+     * 
+     * @param move
+     * @param newTarget
+     * @return move with the given target
+     */
     private Move generateNewMoveWithDifferentTarget(Move move, Integer newTarget) {
     	Move toReturn = move;
     	if(move instanceof MoveTicket)
@@ -436,105 +499,118 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
     	{
     		MoveTicket moveTicket1 = ((MoveDouble) move).move1;
     		MoveTicket moveTicket2 = ((MoveDouble) move).move2;
+    		//modify each of the individual tickets
     		moveTicket1 = MoveTicket.instance(moveTicket1.colour, moveTicket1.ticket, newTarget);
     		moveTicket2 = MoveTicket.instance(moveTicket2.colour, moveTicket2.ticket, newTarget);
+    		//now assemble them back into a double ticket. Phew
     		toReturn = MoveDouble.instance(move.colour, moveTicket1, moveTicket2);
     	}
     	return toReturn;
     }
     
     /**
-     * 
+     * Increments the game round
      */
     private void incrementRound() {
     	++currentRound;
     }
     
     /**
-     * 
-     * @param player
-     * @return
+     * Returns a {@link scotlandyard.PlayerData} instance of the given player
+     * @param player the player whose PlayerData we want
+     * @return the PlayerData instance of the given player
      */
     private PlayerData getPlayerDataByColour(Colour player) {
+    	//we use the PlayersMap as the main store
     	return playersMap.get(player);
     }
     
     /**
+     * Tells if the given player is Mr.X
      * 
-     * @param player
-     * @return
+     * @param player the player we're interested in
+     * @return true if he's Mr.X, false otherwise
      */
     public boolean isPlayerMrX(Colour player) {
     	return player == mrXColour;
     }
     
     /**
+     * Tells if the given player is Mr.X
      * 
-     * @param player
-     * @return
+     * @param player the player we're interested in
+     * @return true if he's Mr.X, false otherwise
      */
     private boolean isPlayerMrX(PlayerData player) {
+    	//polymorphism in practice
     	return isPlayerMrX(player.getColour());
     }
     
     /**
+     * Tells if the given player is a detective
      * 
-     * @param player
-     * @return
+     * @param player the player we're interested in
+     * @return true if the player is a detective, false otherwise
      */
     public boolean isPlayerADetective(Colour player) {
+    	//I don't like to repeat myself. Duhh
     	return !isPlayerMrX(player);
     }
     
     /**
+     * Tells if the given player is a detective
      * 
-     * @param player
-     * @return
+     * @param player the player we're interested in
+     * @return true if the player is a detective, false otherwise
      */
     private boolean isPlayerADetective(PlayerData player) {
+    	//practicing what I preach baby
     	return !isPlayerMrX(player);
     }
     
     /**
-     * 
-     * @param location
+     * Updates Mr.X's last known location
      */
     private void revealMrX() {
     	lastKnownLocationOfMrX = getMrXData().getLocation();
     }
     
     /**
-     * 
-     * @return
+     * Returns Mr.X's last revealed location
+     * @return the last location Mr.X was kind enough to reveal
      */
     public int getLastRevealedLocationOfMrX() {
     	return lastKnownLocationOfMrX;
     }
     
     /**
+     * Checks if a player has a ticket of a specific type
      * 
-     * @param player
-     * @param ticket
-     * @return
+     * @param player the player whose tickets we're going through
+     * @param ticket the ticket type we're looking for
+     * @return true, if he has at least 1 ticket of the given type, false otherwise
      */
     public boolean playerHasATicketOfType(Colour player, Ticket ticket) {
     	return getPlayerTickets(player, ticket) > 0;
     }
     
     /**
+     * Checks if a player has a ticket of a specific type
      * 
-     * @param player
-     * @param ticket
-     * @return
+     * @param player the player whose tickets we're going through
+     * @param ticket the ticket type we're looking for
+     * @return true, if he has at least 1 ticket of the given type, false otherwise
      */
     private boolean playerHasATicketOfType(PlayerData player, Ticket ticket) {
+    	//because polymorphism
     	return playerHasATicketOfType(player.getColour(), ticket);
     }
     
     /**
+     * Tells if a player with a given colour is late to the party
      * 
-     * @param player
-     * @return
+     * @param player the player who we're interested in
+     * @return Feeling DRY with this one, look above
      */
     public boolean playerHasJoinedGame(Colour player)
     {
@@ -542,30 +618,31 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
     }
     
     /**
-     * 
-     * @param player1
-     * @param player2
-     * @return
+     * Tells if two given players collide on the same location
+     * @param player1 the first player
+     * @param player2 the secpmd player
+     * @return true if they're on the same location, false otherwise
      */
     private boolean playersOverlap(Colour player1, Colour player2) {
     	PlayerData player1Data = getPlayerDataByColour(player1);
     	PlayerData player2Data = getPlayerDataByColour(player2);
+    	//conventions can be a b...*cough* nevermind
     	return playersOverlap(player1Data, player2Data);
     }
     
     /**
-     * 
-     * @param player1
-     * @param player2
-     * @return
+     * Tells if two given players collide on the same location
+     * @param player1 the first player
+     * @param player2 the second player
+     * @return true if they're on the same location, false otherwise
      */
     private boolean playersOverlap(PlayerData player1, PlayerData player2) {
     	return player1.getLocation() == player2.getLocation();
     }
     
     /**
-     * 
-     * @return
+     * Return an {@link scotlandyard.PlayerData} instance of Mr.X
+     * @return Mr.X's player data
      */
     private PlayerData getMrXData()
     {
@@ -573,16 +650,16 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
     }
     
     /**
-     * 
-     * @return
+     * Returns the {@link scotlandyard.Colour} of Mr.X
+     * @return Mr.X's colour
      */
     public Colour getMrXColour() {
     	return mrXColour;
     }
     
     /**
-     * 
-     * @return
+     * Returns the detective's as a list of their {@link scotlandyard.PlayerData}
+     * @return list of the detectives
      */
     private List<PlayerData> getDetectivesData() {
     	List<PlayerData> result = new ArrayList<PlayerData>();

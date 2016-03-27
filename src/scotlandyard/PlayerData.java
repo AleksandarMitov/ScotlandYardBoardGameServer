@@ -135,6 +135,12 @@ public class PlayerData {
         return false;
     }
     
+    /**
+     * Tells if the player has a ticket of a given kind
+     * 
+     * @param ticket the ticket type to check for
+     * @return true if he has at least 1 ticket of the given type, false otherwise
+     */
     public boolean hasTicket(Ticket ticket)
     {
     	return tickets.containsKey(ticket) && tickets.get(ticket) > 0;
