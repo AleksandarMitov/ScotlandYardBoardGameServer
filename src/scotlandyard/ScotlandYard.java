@@ -16,7 +16,7 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
     private List<Boolean> rounds;
     private ScotlandYardGraph graph;
     private List<PlayerData> players = new ArrayList<PlayerData>(); //holding the players as a list in proper order
-    private Map<Colour, PlayerData> playersMap = new HashMap<Colour, PlayerData>(); //holding the players as a key-value pair
+    public Map<Colour, PlayerData> playersMap = new HashMap<Colour, PlayerData>(); //holding the players as a key-value pair
     private int numberOfPlayersCurrentlyJoined = 0;
     private int lastKnownLocationOfMrX = 0;
     private int currentRound = 0;
@@ -271,8 +271,35 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      * @return A set containing the colours of the winning players
      */
     public Set<Colour> getWinningPlayers() {
-        //TODO:
-        return new HashSet<Colour>();
+    	Set<Colour> result = new HashSet<Colour>();
+    	if(!isGameOver()) return result;
+    	//check if MrX has been found
+    	PlayerData mrX = playersMap.get(Colour.Black);
+    	boolean mrXHasBeenFound = false;
+    	for(PlayerData player : players)
+    	{
+    		//check if a detective is on the same location as Mr.X
+    		if(player.getColour() != Colour.Black && player.getLocation() == mrX.getLocation())
+    		{
+    			mrXHasBeenFound = true;
+    			break;
+    		}
+    	}
+    	//if he's found or he cannot make a move
+    	if(mrXHasBeenFound || validMoves(mrX.getColour()).isEmpty())
+    	{
+    		//detectives win
+    		for(PlayerData player : players)
+    		{
+    			if(player.getColour() != Colour.Black) result.add(player.getColour());
+    		}
+    	}
+    	else
+    	{
+    		//if the game is over and Mr.X hasn't been found or he can move, then he must be the one winning
+    		result.add(mrX.getColour());
+    	}
+    	return result;
     }
 
     /**
@@ -311,7 +338,35 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
      * @return true when the game is over, false otherwise.
      */
     public boolean isGameOver() {
-        //TODO:
+    	if(!isReady()) return false;
+    	if(isReady() && players.size() < 2) return true;
+    	//check if MrX has been found
+    	PlayerData mrX = playersMap.get(Colour.Black);
+    	for(PlayerData player : players)
+    	{
+    		//check if a detective is on the same location as Mr.X
+    		if(player.getColour() != Colour.Black && player.getLocation() == mrX.getLocation()) return true;
+    	}
+    	//now check if we're past 22nd round
+    	if(getCurrentPlayer() == Colour.Black && getRound() == getRounds().size()-1) return true;
+    	//now check if all the detectives cannot move
+    	boolean aDetectiveCanMove = false;
+    	for(PlayerData player : players)
+    	{
+    		if(player.getColour() == Colour.Black) continue; //skip Mr.X
+    		List<Move> possibleMoves = validMoves(player.getColour()); //generate the possible moves for current detective
+    		//if first move is not MovePass, then he can move
+    		if(!(possibleMoves.get(0) instanceof MovePass))
+    		{
+    			aDetectiveCanMove = true;
+    			break;
+    		}
+    	}
+        if(!aDetectiveCanMove) return true;
+        //now check if mr.X can move, if he cannot he has lost
+        List<Move> mrXMoves = validMoves(Colour.Black);
+        //if his moves list is empty, he cannot make a move
+        if(mrXMoves.isEmpty()) return true;
         return false;
     }
 
