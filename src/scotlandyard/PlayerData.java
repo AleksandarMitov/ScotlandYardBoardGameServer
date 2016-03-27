@@ -134,5 +134,9 @@ public class PlayerData {
         }
         return false;
     }
-
+    
+    public boolean hasTicket(Ticket ticket)
+    {
+    	return tickets.containsKey(ticket) && tickets.get(ticket) > 0;
+    }
 }
