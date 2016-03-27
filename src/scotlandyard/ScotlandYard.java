@@ -620,13 +620,13 @@ public class ScotlandYard implements ScotlandYardView, Receiver {
     /**
      * Tells if two given players collide on the same location
      * @param player1 the first player
-     * @param player2 the secpmd player
+     * @param player2 the second player
      * @return true if they're on the same location, false otherwise
      */
     private boolean playersOverlap(Colour player1, Colour player2) {
     	PlayerData player1Data = getPlayerDataByColour(player1);
     	PlayerData player2Data = getPlayerDataByColour(player2);
-    	//conventions can be a b...*cough* nevermind
+    	//conventions can be a ...*cough* a really useful and necessary tool
     	return playersOverlap(player1Data, player2Data);
     }
     
