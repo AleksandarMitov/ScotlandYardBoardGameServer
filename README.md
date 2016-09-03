@@ -1,4 +1,4 @@
-# CWK5:
+# Scotland Yard Board Game Judge:
 Welcome to the Scotland Yard project! During the next few weeks, we will develop a Java application (with GUI) that allows you to play Scotland Yard. We have provided a skeleton for the project along with a basic GUI, it is your job to implement the game model and improve the GUI.
 
 We will implement the full version of the game, not the beginners version. We will also not model the Police and when a detective moves, the ticket they have used will be given to Mr X.
@@ -152,17 +152,3 @@ Hopefully you are now passing all of the tests! Okay, remember we said that we p
 **TODO:** Play some games!
 
 ***
-
-
-## Optional
-
-Now you have a working Scotland Yard game, it's time to improve it. We're going to leave these up to you, so be as creative as possible. Possible improvements include visualising Mr X's possible locations, implementing the Police in the model, etc. Let your imagination run wild! (We will be making an AI in the next coursework, so hold off from that for now!)
-
-
-***
-
-**TODO:** Add some improvements!
-
-***
-
-
