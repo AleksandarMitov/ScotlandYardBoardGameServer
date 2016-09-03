@@ -3,20 +3,6 @@ Welcome to the Scotland Yard project! During the next few weeks, we will develop
 
 We will implement the full version of the game, not the beginners version. We will also not model the Police and when a detective moves, the ticket they have used will be given to Mr X.
 
-
-***
-
-**TODO:** Familiarise yourself with the rules and play the game!
-
-***
-
-**TODO:** Create a repository with the code from this zip file in it:
-
-* [cw5](cw5.zip)
-
-***
-
-
 The project is structured in a very similar way to the Draughts game you implemented, the folders are:
 
 * src: Contains the `.java` source files. You will be working in `scotlandyard/ScotlandYard.java` for the first part.
